@@ -11,3 +11,148 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
 fi
 
 # Customize to your needs...
+
+typeset -U path PATH
+path=(
+  /opt/homebrew/bin(N-/)
+  /opt/homebrew/sbin(N-/)
+  /usr/bin
+  /usr/sbin
+  /bin
+  /sbin
+  /usr/local/bin(N-/)
+  /usr/local/sbin(N-/)
+  /Library/Apple/usr/bin
+)
+
+export PATH=/opt/homebrew/bin:$PATH
+export PATH=$HOME/.nodebrew/current/bin:$PATH
+
+#alias settings
+alias hc='rm -f ~/.zsh_history && exec -l $SHELL'
+alias ll='ls -la'
+#file and directori remove
+alias rmd='rm -rf'
+alias rmf='rm -f'
+#docker alias
+alias dc='docker container'
+alias dci='docker image'
+alias dcc='docker compose'
+#パスをクリップボードにコピー
+alias pwdcp="pwd|pbcopy"
+#python系
+alias python="python3" 
+alias pip="pip3"
+#terraform
+alias tf='terraform'
+
+#csしたら自動でls
+cdls ()                                                                     
+{
+	\cd "$@" && ls
+}
+alias cd="cdls"
+
+export CLICOLOR=1
+export TERM=xterm-256color
+
+# tmuxセッションなかったら作る
+if ! $(tmux has-session -t works 2> /dev/null)
+then
+	tmux new -s works
+fi
+
+# tmux からの起動じゃなかったら tmux attach
+if [ -z "$TMUX" ]
+then
+	tmux attach -t works
+fi
+
+#fzfの設定
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
+export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
+#option+cでtreeからcd
+export FZF_ALT_C_OPTS="--preview 'tree -C {} | head -200'"
+
+# コマンド履歴を増やす
+export HISTFILE=$HOME/.zsh_history
+export HISTSIZE=100000        # メモリ上の履歴リストに保存されるイベントの最大数
+export SAVEHIST=100000        # 履歴ファイルに保存されるイベントの最大数
+setopt hist_expire_dups_first # 履歴を切り詰める際に、重複する最も古いイベントから消す
+setopt hist_ignore_all_dups   # 履歴が重複した場合に古い履歴を削除する
+setopt hist_ignore_dups       # 前回のイベントと重複する場合、履歴に保存しない
+setopt hist_save_no_dups      # 履歴ファイルに書き出す際、新しいコマンドと重複する古いコマンドは切り捨てる
+setopt share_history          # 全てのセッションで履歴を共有する
+
+#docker補完
+fpath=(~/.zsh/completion $fpath)
+zstyle ':completion:*:*:docker:*' option-stacking yes
+zstyle ':completion:*:*:docker-*:*' option-stacking yes
+autoload -Uz compinit && compinit -i
+
+#aws補完
+autoload bashcompinit && bashcompinit
+#complete -C '/usr/local/bin/aws_completer' aws
+complete -C '/opt/homebrew/bin/aws_completer' aws
+eval #compdef gh
+
+#-------------------------------
+# Diary in Dropbox
+#-------------------------------
+function createDialy(){
+    TODAY_DIR=~/Dropbox/Work/diary/$(date "+%Y_%m");
+    TODAY_FILE=~/Dropbox/Work/diary/$(date "+%Y_%m")/$(date "+%Y_%m_%d.md");
+
+    if [ ! -e $TODAY_DIR ]; then
+        mkdir -p $TODAY_DIR
+    fi
+
+    if [ ! -e $TODAY_FILE ]; then
+        cp ~/Dropbox/Work/diary/template.md $TODAY_FILE
+    fi
+
+    gsed -i -e "s/yyyy年mm月dd日/$(date '+%Y年%m月%d日')/g" $TODAY_FILE
+    vim $TODAY_FILE
+}
+
+alias dia=createDialy;
+#-------------------------------
+#
+#git fzf ローカルブランチ検索
+fbr() {
+	local branches branch
+	branches=$(git --no-pager branch -vv) &&
+		branch=$(echo "$branches" | fzf +m) &&
+		git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //")
+	}
+
+#git fzf リモートブランチ検索
+fbrm() {
+	local branches branch
+	branches=$(git branch --all | grep -v HEAD) &&
+		branch=$(echo "$branches" |
+		fzf-tmux -d $(( 2 + $(wc -l <<< "$branches") )) +m) &&
+		git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+	}
+
+#git fzf log --graphの見やすい版
+fshow() {
+	git log --graph --color=always \
+		--format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
+		fzf --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
+		--bind "ctrl-m:execute:
+			(grep -o '[a-f0-9]\{7\}' | head -1 |
+				xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
+							{}
+							FZF-EOF"
+						}
+
+#gfp プルリクしたい番号でプルリクの動作検証
+function gpl() {
+ command git fetch origin pull/$1/head:PR-$1 && git checkout PR-$1
+}
+
+
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.0/terraform terraform
