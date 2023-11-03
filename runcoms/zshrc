@@ -97,28 +97,6 @@ autoload bashcompinit && bashcompinit
 complete -C '/opt/homebrew/bin/aws_completer' aws
 eval #compdef gh
 
-#-------------------------------
-# Diary in Dropbox
-#-------------------------------
-function createDialy(){
-    TODAY_DIR=~/Dropbox/Work/diary/$(date "+%Y_%m");
-    TODAY_FILE=~/Dropbox/Work/diary/$(date "+%Y_%m")/$(date "+%Y_%m_%d.md");
-
-    if [ ! -e $TODAY_DIR ]; then
-        mkdir -p $TODAY_DIR
-    fi
-
-    if [ ! -e $TODAY_FILE ]; then
-        cp ~/Dropbox/Work/diary/template.md $TODAY_FILE
-    fi
-
-    gsed -i -e "s/yyyy年mm月dd日/$(date '+%Y年%m月%d日')/g" $TODAY_FILE
-    vim $TODAY_FILE
-}
-
-alias dia=createDialy;
-#-------------------------------
-#
 #git fzf ローカルブランチ検索
 fbr() {
 	local branches branch
@@ -152,7 +130,6 @@ fshow() {
 function gpl() {
  command git fetch origin pull/$1/head:PR-$1 && git checkout PR-$1
 }
-
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.0/terraform terraform
